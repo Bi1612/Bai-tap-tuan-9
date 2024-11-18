@@ -1,0 +1,109 @@
+#include <iostream>
+#include <string>
+#include <ctime>
+
+using namespace std;
+
+struct FileNode {
+    string filename;     
+    time_t timestamp;  
+    long size;          
+    FileNode* next;     
+
+    FileNode(string name, time_t time, long file_size)
+        : filename(name), timestamp(time), size(file_size), next(nullptr) {}
+};
+
+struct FileList {
+
+    FileList() : head(nullptr) {}
+
+    void insertFile(FileNode* newFile) {
+        if (head == nullptr || head->timestamp > newFile->timestamp) {
+            newFile->next = head;
+            head = newFile;
+        } else {
+            FileNode* temp = head;
+            while (temp->next != nullptr && temp->next->timestamp < newFile->timestamp) {
+                temp = temp->next;
+            }
+            newFile->next = temp->next;
+            temp->next = newFile;
+        }
+    }
+
+    long calculateTotalSize() {
+        long totalSize = 0;
+        FileNode* temp = head;
+        while (temp != nullptr) {
+            totalSize += temp->size;
+            temp = temp->next;
+        }
+        return totalSize;
+    }
+
+    void printFiles() {
+        FileNode* temp = head;
+        while (temp != nullptr) {
+            cout << "Filename: " << temp->filename << ", Size: " << temp->size << " bytes, Timestamp: " << ctime(&temp->timestamp);
+            temp = temp->next;
+        }
+    }
+
+    void removeSmallFiles(long availableSpace) {
+        long totalSize = calculateTotalSize();
+        while (totalSize > availableSpace) {
+            FileNode* temp = head;
+            FileNode* prev = nullptr;
+            FileNode* minFilePrev = nullptr;
+            FileNode* minFileNode = head;
+            long minSize = head->size;
+
+            while (temp != nullptr) {
+                if (temp->size < minSize) {
+                    minSize = temp->size;
+                    minFilePrev = prev;
+                    minFileNode = temp;
+                }
+                prev = temp;
+                temp = temp->next;
+            }
+
+            if (minFilePrev == nullptr) {  // File nhỏ nhất là node đầu tiên
+                head = minFileNode->next;
+            } else {
+                minFilePrev->next = minFileNode->next;
+            }
+            delete minFileNode;
+
+           
+            totalSize = calculateTotalSize();
+        }
+    }
+};
+
+int main() {
+   
+    FileList fileList;
+
+ 
+    time_t now = time(0); // Thời gian hiện tại
+    fileList.insertFile(new FileNode("file1.txt", now - 100, 1000)); // file1 có kích thước 1000 byte
+    fileList.insertFile(new FileNode("file2.txt", now - 50, 2000));  // file2 có kích thước 2000 byte
+    fileList.insertFile(new FileNode("file3.txt", now - 200, 500));  // file3 có kích thước 500 byte
+
+    cout << "Danh sach file ban dau:" << endl;
+    fileList.printFiles();
+
+    long totalSize = fileList.calculateTotalSize();
+    cout << "\nTong kich thuoc cua cac file: " << totalSize << " bytes" << endl;
+
+    long availableSpace = 32 * 1024 * 1024 * 1024; // Dung lượng ổ USB
+
+    fileList.removeSmallFiles(availableSpace);
+
+    cout << "\nDanh sach file sau khi loai bo file nho nhat:" << endl;
+    fileList.printFiles();
+
+    return 0;
+}
